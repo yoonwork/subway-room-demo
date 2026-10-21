@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>여유칸 · 지하철 혼잡·안전 대시보드 (제안용 데모)</title>
+<meta name="description" content="서울교통공사 공개 데이터(30분 단위 혼잡도, 4호선 칸별 혼잡도, 역 안전설비) 구조로 만든 공모전 제안용 데모예요. 화면의 수치는 모두 예시 값이에요.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%232457F5'/%3E%3Crect x='9' y='7' width='14' height='15' rx='4' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M9 15h14M12 26l2-4M20 26l-2-4' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style id="tokens">
+:root{
+  color-scheme: light;
+  --brand:#2457F5; --brand-hover:#1B45D6; --brand-press:#1638B0; --brand-text:#1B45D6;
+  --brand-tint:#EEF3FF; --brand-tint-2:#D9E4FF; --ring:0 0 0 3px rgba(36,87,245,.25); --on-brand:#FFFFFF;
+  --bg:#F2F4F7; --card:#FFFFFF; --soft:#F7F8FA; --track:#ECEFF3; --line:#E5E8EB; --line-2:#EBEEF2;
+  --ink:#191F28; --ink-2:#4E5968; --mut:#636D7B; --mut-2:#9AA3AE;
+  --ok:#127A4F;   --ok-bg:#E3F6ED;   --ok-dot:#1FA971;
+  --warn:#7A5600; --warn-bg:#FFF3D4; --warn-dot:#F2B01E;
+  --bad:#BF2930;  --bad-bg:#FFE3E4;  --bad-dot:#E5484D;
+  --info:#175CD3; --info-bg:#EAF2FF; --info-dot:#2E7CF6;
+  --neu:#4E5968;  --neu-bg:#F0F2F5;  --neu-dot:#8B95A1;
+  /* 혼잡도 4단계 중 '심각'만 이 데모에서 추가 */
+  --sev:#FFFFFF;  --sev-bg:#A61E26;  --sev-dot:#A61E26;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+  --sh-pill:0 1px 2px rgba(16,24,40,.08);
+  --sh-pop:0 2px 6px rgba(16,24,40,.06),0 12px 32px rgba(16,24,40,.12);
+}
+</style>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:16px}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:none;box-shadow:var(--ring)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* 제안용 데모 띠 */
+.band{background:var(--ink);color:#fff;font-size:13px;line-height:1.5;padding:8px 0}
+.band .wrap{display:flex;gap:8px;align-items:center;justify-content:center;text-align:center}
+.band b{font-weight:600}
+
+/* 머리 */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo svg{flex:none}
+.logo b{font-size:17px;font-weight:700;letter-spacing:-0.01em}
+.logo span{display:block;font-size:12px;color:var(--mut);font-weight:500;line-height:1.3}
+.nav{display:flex;gap:4px;background:var(--track);border-radius:var(--r-pill);padding:4px}
+.nav a{display:flex;align-items:center;height:36px;padding:0 16px;border-radius:var(--r-pill);font-size:14px;font-weight:500;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh-pill)}
+
+/* 제목 줄 */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin:16px 0 24px}
+.head h1{font-size:32px;line-height:1.3;font-weight:700;letter-spacing:-0.02em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.line4{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:var(--r-pill);background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:0}
+.line4 i{width:8px;height:8px;border-radius:50%;background:var(--ink-2)}
+.head .sub{margin-top:4px;font-size:14px;color:var(--mut)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.select{height:44px;min-width:208px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23636D7B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;padding:0 40px 0 16px;font-size:15px;appearance:none;-webkit-appearance:none;cursor:pointer}
+.select:hover{border-color:#D1D6DB}
+.seg{display:inline-flex;gap:2px;background:var(--track);border-radius:var(--r-pill);padding:4px}
+.seg button{height:36px;padding:0 14px;border:0;border-radius:var(--r-pill);background:transparent;font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh-pill)}
+
+/* 상태 칩 */
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--r-pill);font-size:12px;font-weight:600;white-space:nowrap}
+.chip i{width:6px;height:6px;border-radius:50%;flex:none}
+.s0{color:var(--ok);background:var(--ok-bg)} .s0 i{background:var(--ok-dot)}
+.s1{color:var(--warn);background:var(--warn-bg)} .s1 i{background:var(--warn-dot)}
+.s2{color:var(--bad);background:var(--bad-bg)} .s2 i{background:var(--bad-dot)}
+.s3{color:var(--sev);background:var(--sev-bg)} .s3 i{background:#fff}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:16px}
+.kpi{background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:20px 24px;min-width:0}
+.kpi.hl{background:var(--brand-tint);border-color:transparent}
+.kpi .lab{font-size:14px;font-weight:500;color:var(--mut)}
+.kpi.hl .lab{color:var(--ink-2)}
+.kpi .num{margin-top:8px;font-size:32px;line-height:1.25;font-weight:700;letter-spacing:-0.02em}
+.kpi .num small{font-size:17px;font-weight:500;color:var(--mut);margin-left:2px;letter-spacing:0}
+.kpi.hl .num{font-size:44px;line-height:1.15;letter-spacing:-0.03em}
+.kpi.hl .num small{font-size:20px}
+.kpi .foot{margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--mut);line-height:1.4}
+.kpi.hl .foot{color:var(--ink-2)}
+
+/* 그리드와 카드 */
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;margin-top:16px}
+.c8{grid-column:span 8}.c4{grid-column:span 4}.c7{grid-column:span 7}.c5{grid-column:span 5}.c12{grid-column:span 12}
+.card{background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:24px;min-width:0}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.ch h2{font-size:17px;font-weight:600;line-height:1.3}
+.ch p{margin-top:4px;font-size:13px;color:var(--mut);line-height:1.5}
+.ch .when{flex:none;font-size:13px;font-weight:600;color:var(--brand-text);background:var(--brand-tint);height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:var(--r-pill);font-variant-numeric:tabular-nums}
+section[id]{scroll-margin-top:16px}
+
+/* 막대 차트 */
+.chart{position:relative;user-select:none;-webkit-user-select:none}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart svg:focus-visible{box-shadow:var(--ring);border-radius:8px}
+.chart .ax{font-size:12px;fill:var(--mut);font-variant-numeric:tabular-nums}
+.chart .grid-l{stroke:var(--line-2);stroke-width:1}
+.chart .base-l{stroke:var(--line);stroke-width:1}
+.chart .bar{fill:var(--brand-tint-2);transition:fill .12s}
+.chart .bar.sel{fill:var(--brand)}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .hit:hover + .bar:not(.sel), .chart .bar.hov:not(.sel){fill:#B9CCFF}
+.chart .th{stroke-width:1.5;stroke-dasharray:4 4;fill:none}
+.chart .thl{font-size:12px;font-weight:600}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;border-radius:var(--r-sm);padding:8px 10px;font-size:12px;line-height:1.4;white-space:nowrap;box-shadow:var(--sh-pop);opacity:0;transform:translate(-50%,-100%);transition:opacity .1s}
+.tip b{display:block;font-size:15px;font-weight:700}
+.tip.on{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:12px;color:var(--mut)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px;border-radius:50%}
+details.tbl{margin-top:16px;border-top:1px solid var(--line-2);padding-top:12px}
+details.tbl summary{cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-2);min-height:44px;display:flex;align-items:center;list-style:none;gap:8px}
+details.tbl summary::-webkit-details-marker{display:none}
+details.tbl summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(-45deg);transition:transform .15s}
+details.tbl[open] summary::before{transform:rotate(45deg)}
+.tview{max-height:280px;overflow:auto;margin-top:8px;border:1px solid var(--line-2);border-radius:var(--r-md)}
+.tview table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tview th{position:sticky;top:0;background:var(--soft);color:var(--mut);font-weight:500;text-align:left;padding:8px 12px}
+.tview td{padding:8px 12px;border-top:1px solid var(--line-2)}
+.tview td.r,.tview th.r{text-align:right}
+.tview tr.sel td{background:var(--brand-tint)}
+
+/* 칸별 */
+.train{display:flex;flex-direction:column;gap:4px}
+.car{display:grid;grid-template-columns:48px minmax(0,1fr) 52px 20px;align-items:center;gap:10px;height:32px;font-size:13px}
+.car .cn{color:var(--ink-2);font-weight:500}
+.car .cb{height:12px;background:var(--soft);border-radius:4px;overflow:hidden}
+.car .cb i{display:block;height:100%;background:var(--brand-tint-2);border-radius:0 4px 4px 0}
+.car .cv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.car .cd{width:8px;height:8px;border-radius:50%;justify-self:center}
+.car.rec{background:var(--brand-tint);border-radius:var(--r-sm);margin:0 -8px;padding:0 8px;grid-template-columns:48px minmax(0,1fr) 52px 20px}
+.car.rec .cb{background:#fff}
+.car.rec .cb i{background:var(--brand)}
+.car.rec .cn,.car.rec .cv{color:var(--brand-text);font-weight:700}
+.rec-note{margin-top:12px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.rec-note b{color:var(--ink);font-weight:600}
+.doors{margin-top:16px;padding-top:16px;border-top:1px solid var(--line-2)}
+.doors h3{font-size:14px;font-weight:600}
+.doors p{font-size:13px;color:var(--mut);margin-top:2px}
+.door-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.door{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--r-pill);background:var(--warn-bg);color:var(--warn);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.door svg{flex:none}
+.door.none{background:var(--soft);color:var(--mut);font-weight:500}
+
+/* 붐비는 역 Top 5 */
+.rank{display:flex;flex-direction:column}
+.rank button{display:grid;grid-template-columns:20px minmax(88px,140px) minmax(0,1fr) 52px 64px;align-items:center;gap:12px;min-height:60px;padding:0 8px;margin:0 -8px;border:0;background:transparent;border-radius:var(--r-md);text-align:left;cursor:pointer;font-size:14px}
+.rank button+button{border-top:1px solid var(--line-2);border-radius:0}
+.rank button:hover{background:var(--soft);border-radius:var(--r-md)}
+.rank button[aria-current="true"] .rn{color:var(--brand-text);font-weight:700}
+.rank .ri{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.rank .rn{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank .rb{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.rank .rb i{display:block;height:100%;background:var(--brand-tint-2);border-radius:0 4px 4px 0}
+.rank button[aria-current="true"] .rb i{background:var(--brand)}
+.rank .rv{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.rank .chip{justify-self:end}
+
+/* 안전설비 */
+.facs{display:flex;flex-direction:column}
+.fac{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0}
+.fac+.fac{border-top:1px solid var(--line-2)}
+.fac .ic{width:40px;height:40px;border-radius:50%;background:var(--soft);display:grid;place-items:center;color:var(--ink-2)}
+.fac .ft{font-size:14px;font-weight:600;line-height:1.4}
+.fac .fd{font-size:13px;color:var(--mut);line-height:1.4;margin-top:2px}
+.fac .fv{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.fac .fv small{font-size:13px;font-weight:500;color:var(--mut);margin-left:2px}
+
+/* 데이터 표 */
+.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.dtable th{background:var(--soft);color:var(--mut);font-weight:500;font-size:13px;text-align:left;padding:10px 16px}
+.dtable th:first-child{border-radius:var(--r-sm) 0 0 var(--r-sm)}
+.dtable th:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0}
+.dtable td{padding:14px 16px;border-bottom:1px solid var(--line-2);vertical-align:top;line-height:1.5}
+.dtable tr:last-child td{border-bottom:0}
+.dtable .dn{font-weight:600}
+.dtable .dn a{text-decoration:none}
+.dtable .dn a:hover{text-decoration:underline}
+.dtable .dm{display:block;font-size:12px;color:var(--mut);font-weight:500;margin-top:2px}
+.dtable .cols{color:var(--ink-2);font-size:13px}
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--r-pill);background:var(--neu-bg);color:var(--neu);font-size:12px;font-weight:600;white-space:nowrap}
+.tag.next{background:var(--info-bg);color:var(--info)}
+.basis{margin-top:16px;padding:16px;border-radius:var(--r-md);background:var(--soft);font-size:13px;color:var(--ink-2);line-height:1.6}
+.basis b{color:var(--ink);font-weight:600}
+
+footer{margin:32px 0 calc(32px + env(safe-area-inset-bottom));font-size:13px;color:var(--mut);line-height:1.6}
+footer p+p{margin-top:4px}
+
+@media (max-width:1100px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .c8,.c4,.c7,.c5{grid-column:span 12}
+}
+@media (max-width:640px){
+  .wrap{padding:0 16px}
+  .band{font-size:12px}
+  .top{height:auto;padding:12px 0;flex-wrap:wrap;gap:12px}
+  .nav{width:100%}
+  .nav a{flex:1;justify-content:center;height:44px;padding:0 4px;font-size:13px}
+  .head{margin:8px 0 16px;gap:16px}
+  .head h1{font-size:24px;gap:8px}
+  .controls{width:100%}
+  .select{width:100%;min-width:0}
+  .seg{flex:1}
+  .seg button{flex:1;height:44px;padding:0 8px}
+  .kpis{gap:12px}
+  .kpi{padding:16px}
+  .kpi .lab{font-size:13px}
+  .kpi .num{font-size:24px}
+  .kpi .num small{font-size:15px}
+  .kpi.hl,.kpi.wide{grid-column:span 2}
+  .kpi.hl .num{font-size:36px}
+  .kpi.hl .num small{font-size:17px}
+  .kpi .foot{margin-top:8px;font-size:12px}
+  .grid{gap:12px;margin-top:12px}
+  .card{padding:20px}
+  .rank button{grid-template-columns:16px minmax(0,1fr) 48px 60px;gap:8px}
+  .rank .rb{display:none}
+  .rank button{min-height:52px}
+  .dtable thead{display:none}
+  .dtable,.dtable tbody,.dtable tr,.dtable td{display:block;width:100%}
+  .dtable tr{padding:12px 0;border-bottom:1px solid var(--line-2)}
+  .dtable tr:last-child{border-bottom:0}
+  .dtable td{border:0;padding:2px 0}
+  .dtable td[data-k]::before{content:attr(data-k);display:inline-block;min-width:64px;color:var(--mut);font-size:12px;font-weight:500}
+}
+</style>
+</head>
+<body>
+<div class="band" role="note"><div class="wrap"><span><b>제안용 데모</b> · 화면의 숫자는 모두 예시 값이에요. 실제 서비스는 공공데이터포털 파일을 불러와 계산해요.</span></div></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-aed" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10.5v5M9.5 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><rect x="8" y="8.5" width="8" height="12.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8.5V5.5M10 5.5h4.5l3-1.5M8 12.5h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-elv" viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 10 2.5-2.5 2.5 2.5M9.5 14l2.5 2.5 2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-psd" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5v14M9 12h.01M15 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-gap" viewBox="0 0 24 24"><path d="M12 4.5 21 19.5H3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10.5v4M12 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="#forecast" aria-label="여유칸 처음으로">
+      <svg width="36" height="36" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="#2457F5"/><rect x="9" y="7" width="14" height="15" rx="4" fill="none" stroke="#fff" stroke-width="2"/><path d="M9 15h14M12.5 26l1.5-4M19.5 26 18 22" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      <div><b>여유칸</b><span>지하철 혼잡·안전 대시보드</span></div>
+    </a>
+    <nav class="nav" aria-label="화면 구역">
+      <a href="#forecast" aria-current="true">혼잡 예보</a>
+      <a href="#cars">칸별 혼잡</a>
+      <a href="#safety">안전설비</a>
+      <a href="#data">데이터</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="head">
+      <div>
+        <h1><span id="stName">성신여대입구역</span><span class="line4"><i></i>4호선</span></h1>
+        <p class="sub" id="stSub">평일 · 하선 · 2026년 6월 데이터 구조 기준</p>
+      </div>
+      <div class="controls">
+        <label class="sr" for="stSel" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">역 고르기</label>
+        <select id="stSel" class="select"></select>
+        <div class="seg" role="group" aria-label="요일" id="segDay">
+          <button type="button" data-v="0" aria-pressed="true">평일</button>
+          <button type="button" data-v="1" aria-pressed="false">토요일</button>
+          <button type="button" data-v="2" aria-pressed="false">일요일</button>
+        </div>
+        <div class="seg" role="group" aria-label="방향" id="segDir">
+          <button type="button" data-v="0" aria-pressed="false">상선</button>
+          <button type="button" data-v="1" aria-pressed="true">하선</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="kpis" aria-label="요약">
+      <div class="kpi hl">
+        <div class="lab" id="k1lab">08:00~08:30 예상 혼잡도</div>
+        <div class="num" id="k1num">183<small>%</small></div>
+        <div class="foot" id="k1foot"></div>
+      </div>
+      <div class="kpi">
+        <div class="lab">주의 이상 시간대</div>
+        <div class="num" id="k2num">2<small>개 구간</small></div>
+        <div class="foot" id="k2foot"></div>
+      </div>
+      <div class="kpi">
+        <div class="lab">가장 여유로운 칸</div>
+        <div class="num" id="k3num">1<small>호차</small></div>
+        <div class="foot" id="k3foot"></div>
+      </div>
+      <div class="kpi wide">
+        <div class="lab">이 역 자동심장충격기</div>
+        <div class="num" id="k4num">2<small>대</small></div>
+        <div class="foot" id="k4foot"></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card c8" id="forecast" aria-labelledby="h-fc">
+        <div class="ch">
+          <div>
+            <h2 id="h-fc">시간대별 혼잡도</h2>
+            <p>30분 동안 이 역을 지난 열차의 평균이에요. 막대를 누르면 그 시간으로 바뀌어요.</p>
+          </div>
+        </div>
+        <div class="chart" id="chart">
+          <svg id="chartSvg" height="260" role="img" tabindex="0" aria-label="시간대별 혼잡도 막대 차트. 왼쪽 오른쪽 화살표로 시간을 고를 수 있어요."></svg>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div class="legend" aria-label="혼잡도 단계">
+          <span><i style="background:var(--ok-dot)"></i>보통 150% 이하</span>
+          <span><i style="background:var(--warn-dot)"></i>주의 170% 이하</span>
+          <span><i style="background:var(--bad-dot)"></i>혼잡 190% 이하</span>
+          <span><i style="background:var(--sev-dot)"></i>심각 190% 초과</span>
+          <span>좌석이 다 차면 34%</span>
+        </div>
+        <details class="tbl">
+          <summary>표로 보기 (39개 시간대)</summary>
+          <div class="tview"><table><thead><tr><th>시간</th><th class="r">혼잡도</th><th>단계</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        </details>
+      </section>
+
+      <section class="card c4" id="cars" aria-labelledby="h-cars">
+        <div class="ch">
+          <div>
+            <h2 id="h-cars">칸별 혼잡도</h2>
+            <p>4호선 10칸 기준이에요.</p>
+          </div>
+          <span class="when" id="carWhen">08:00</span>
+        </div>
+        <div class="train" id="train"></div>
+        <p class="rec-note" id="recNote"></p>
+        <div class="doors">
+          <h3>탈 때 살필 문</h3>
+          <p>곡선 승강장이라 열차와 틈이 넓은 곳이에요.</p>
+          <div class="door-list" id="doors"></div>
+        </div>
+      </section>
+
+      <section class="card c7" aria-labelledby="h-rank">
+        <div class="ch">
+          <div>
+            <h2 id="h-rank">같은 시간 붐비는 역</h2>
+            <p id="rankSub">4호선 · 평일 · 하선</p>
+          </div>
+          <span class="when" id="rankWhen">08:00</span>
+        </div>
+        <div class="rank" id="rank"></div>
+      </section>
+
+      <section class="card c5" id="safety" aria-labelledby="h-safe">
+        <div class="ch">
+          <div>
+            <h2 id="h-safe">이 역 안전설비</h2>
+            <p>붐빌 때 먼저 알려 줄 설비예요.</p>
+          </div>
+        </div>
+        <div class="facs" id="facs"></div>
+      </section>
+
+      <section class="card c12" id="data" aria-labelledby="h-data">
+        <div class="ch">
+          <div>
+            <h2 id="h-data">이 화면에 쓰는 공개 데이터</h2>
+            <p>모두 공공데이터포털에 서울교통공사가 올린 데이터예요. 항목 이름은 포털의 컬럼 정보 그대로예요.</p>
+          </div>
+        </div>
+        <table class="dtable">
+          <thead><tr><th>데이터</th><th>주요 항목</th><th>이 화면에서</th><th>형태</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15071311/fileData.do" target="_blank" rel="noopener">지하철혼잡도정보</a><span class="dm">1~8호선 · 2026년 6월 · 1,671행</span></td>
+              <td class="cols" data-k="항목">구분(평일·토요일·일요일), 호선, 역번호, 역명, 상하구분, 5시30분~00시30분 30분 단위 39칸</td>
+              <td data-k="쓰는 곳">시간대별 혼잡도, 같은 시간 붐비는 역</td>
+              <td data-k="형태"><span class="tag">CSV · 분기</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15167486/fileData.do" target="_blank" rel="noopener">4호선 열차 칸별 혼잡도 정보</a><span class="dm">2026.6.1~7.31 · 4호선 신조 전동차</span></td>
+              <td class="cols" data-k="항목">운행일자, 요일구분, 측정시각, 편성번호, 호차, 현재역, 다음역, 혼잡도</td>
+              <td data-k="쓰는 곳">칸별 혼잡도, 가장 여유로운 칸</td>
+              <td data-k="형태"><span class="tag">CSV(ZIP 분할) · 월간</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15118627/fileData.do" target="_blank" rel="noopener">연단정보와 곡선구간 정보</a><span class="dm">1~8호선 276개 역 · 19,304행</span></td>
+              <td class="cols" data-k="항목">호선, 역명, 상하선, 승강장위치, 연단간격, 높이차, 승강장선형</td>
+              <td data-k="쓰는 곳">탈 때 살필 문</td>
+              <td data-k="형태"><span class="tag">CSV · 수시</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15118657/fileData.do" target="_blank" rel="noopener">역별 자동심장충격기 설치 현황</a><span class="dm">2026년 9월 기준 · 419행</span></td>
+              <td class="cols" data-k="항목">호선, 역명, 역내안전설비 구분, 지상지하구분, 역층, 상세위치, 설치형태, 보유대수</td>
+              <td data-k="쓰는 곳">자동심장충격기 위치</td>
+              <td data-k="형태"><span class="tag">CSV · 연간</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15044446/fileData.do" target="_blank" rel="noopener">소화기설치현황</a><span class="dm">2026년 9월 기준 · 622행</span></td>
+              <td class="cols" data-k="항목">호선, 역명, 역내안전설비 구분, 소화기 종류, 보유대수</td>
+              <td data-k="쓰는 곳">안전설비</td>
+              <td data-k="형태"><span class="tag">CSV · 연간</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15044261/fileData.do" target="_blank" rel="noopener">엘리베이터 설치현황</a><span class="dm">2026년 9월 기준 · 868행</span></td>
+              <td class="cols" data-k="항목">호선, 역명, 관리번호(호기), (근접)출입구번호, 시작층·종료층, 정원</td>
+              <td data-k="쓰는 곳">안전설비, 교통약자 동선</td>
+              <td data-k="형태"><span class="tag">CSV · 반기</span></td>
+            </tr>
+            <tr>
+              <td class="dn"><a href="https://www.data.go.kr/data/15071253/fileData.do" target="_blank" rel="noopener">역사승강장안전문(PSD) 설치정보</a><span class="dm">2026년 1월 기준</span></td>
+              <td class="cols" data-k="항목">호선, 역명, 안전문수, 개폐방식, 사업방식, 준공일자</td>
+              <td data-k="쓰는 곳">안전설비</td>
+              <td data-k="형태"><span class="tag">CSV · 수시</span></td>
+            </tr>
+            <tr>
+              <td class="dn">역사 3D·2D 공간정보<span class="dm">공모전 샘플데이터로 제공 · 개방 예정</span></td>
+              <td class="cols" data-k="항목">샘플을 받은 뒤 구조 확인</td>
+              <td data-k="쓰는 곳">다음 단계: 설비 위치를 역 도면 위에 표시</td>
+              <td data-k="형태"><span class="tag next">다음 단계</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="basis">
+          <b>혼잡도 단계 기준</b> · 150% 이하 보통, 150% 초과~170% 이하 주의, 170% 초과~190% 이하 혼잡, 190% 초과 심각이에요. 「철도안전관리체계 기술기준」의 혼잡도 관리범위로, 공공데이터포털 ‘4호선 열차 칸별 혼잡도 정보’ 설명에 적혀 있어요. 혼잡도는 열차 정원 대비 승차 인원 비율이고, 좌석만 다 차면 34%예요(‘지하철혼잡도정보’ 설명).
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>여유칸은 공모전 제안을 위해 만든 가상의 서비스 이름이에요. 서울교통공사와 관계없는 개인 제안용 데모예요.</p>
+    <p>역 이름은 실제 4호선 역이지만, 혼잡도·설비 수·문 위치 같은 숫자는 모두 예시 값이에요.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // ── 예시 값 만들기 (실제 데이터 아님) ──────────────────────────────
+  // 역마다 [상선, 하선] 아침·저녁 정점 크기와 낮 시간 기본값을 정해 30분 단위 39칸을 만든다.
+  var ST = [
+    {n:'노원',             am:[70,132], pm:[120,62], mid:38, sh:-1, aed:[2,'대합실 고객안내센터 옆'], ext:41, elv:[3,'1·9번 출입구 쪽'], psd:'설치', doors:[]},
+    {n:'창동',             am:[60,138], pm:[126,58], mid:40, sh:1,  aed:[2,'2층 승강장 계단 옆'], ext:52, elv:[4,'1·2번 출입구 쪽'], psd:'설치', doors:['6-2']},
+    {n:'미아사거리',       am:[58,148], pm:[132,60], mid:42, sh:0,  aed:[1,'대합실 개찰구 앞'], ext:38, elv:[2,'4·5번 출입구 쪽'], psd:'설치', doors:[]},
+    {n:'성신여대입구',     am:[62,158], pm:[140,64], mid:44, sh:-2, aed:[2,'대합실 고객안내센터 옆'], ext:46, elv:[3,'5·6번 출입구 쪽'], psd:'설치', doors:['2-3','9-1']},
+    {n:'혜화',             am:[64,138], pm:[136,66], mid:46, sh:0,  aed:[2,'대합실 개찰구 옆'], ext:44, elv:[3,'1·2번 출입구 쪽'], psd:'설치', doors:['4-4']},
+    {n:'동대문역사문화공원',am:[70,128], pm:[118,72], mid:52, sh:2,  aed:[3,'환승통로 중앙'], ext:63, elv:[5,'1·10번 출입구 쪽'], psd:'설치', doors:['1-2','7-3','10-4']},
+    {n:'서울역',           am:[78,112], pm:[104,80], mid:56, sh:1,  aed:[3,'대합실 고객안내센터 옆'], ext:58, elv:[4,'1·12번 출입구 쪽'], psd:'설치', doors:['3-1']},
+    {n:'삼각지',           am:[66,104], pm:[96,70],  mid:48, sh:-1, aed:[1,'대합실 개찰구 앞'], ext:35, elv:[2,'13·14번 출입구 쪽'], psd:'설치', doors:[]},
+    {n:'총신대입구(이수)', am:[92,84],  pm:[78,100], mid:50, sh:0,  aed:[2,'환승통로 계단 옆'], ext:49, elv:[3,'7·14번 출입구 쪽'], psd:'설치', doors:['8-2','8-3']},
+    {n:'사당',             am:[118,70], pm:[64,112], mid:46, sh:2,  aed:[2,'대합실 고객안내센터 옆'], ext:55, elv:[4,'1·10번 출입구 쪽'], psd:'설치', doors:['5-1']}
+  ];
+  var DAY = [{n:'평일',am:1,pm:1,mid:1},{n:'토요일',am:.32,pm:.55,mid:1.35},{n:'일요일',am:.22,pm:.45,mid:1.2}];
+  var DIR = ['상선','하선'];
+  var NSLOT = 39; // 5시30분 ~ 00시30분, 30분 단위 (공개 파일과 같은 칸 수)
+  var W = [0.84,0.90,0.97,1.06,1.13,1.12,1.05,0.98,0.91,0.86];
+  var STAGE = ['보통','주의','혼잡','심각'];
+  var DOT = ['var(--ok-dot)','var(--warn-dot)','var(--bad-dot)','var(--sev-dot)'];
+
+  function g(t,m,s){var z=(t-m)/s;return Math.exp(-0.5*z*z)}
+  function val(si,day,dir,i){
+    var s=ST[si], k=DAY[day], t=5.5+0.5*i+0.25;
+    var v=12 + s.mid*k.mid*g(t,13.5,3.4) + s.am[dir]*k.am*g(t,8.25,0.72) + s.pm[dir]*k.pm*g(t,18.6,1.0) + 26*g(t,22.4,1.3)*(day===0?1:.8);
+    if(t<6.5) v*=0.55+0.45*(t-5.5);
+    var j=((i*7+si*13+dir*5+day*3)%9)-4;
+    return Math.max(6,Math.round(v+j*0.7));
+  }
+  function stage(v){return v>190?3:v>170?2:v>150?1:0}
+  function hhmm(min){var h=Math.floor(min/60)%24,m=min%60;return (h<10?'0':'')+h+':'+(m<10?'0':'')+m}
+  function slotLab(i){var a=330+30*i;return hhmm(a)+'~'+hhmm(a+30)}
+  function slotStart(i){return hhmm(330+30*i)}
+  function cars(si,day,dir,i){
+    var v=val(si,day,dir,i), sh=ST[si].sh;
+    var w=W.map(function(_,k){return W[((k-sh)%10+10)%10]});
+    if(dir===1) w.reverse();
+    var mean=w.reduce(function(a,b){return a+b},0)/10;
+    return w.map(function(x,k){return Math.round(v*x/mean + (((k*5+i+si)%5)-2)*0.6)});
+  }
+
+  // ── 상태 ─────────────────────────────────────────────
+  var S={st:3,day:0,dir:1,slot:5};
+  var $=function(id){return document.getElementById(id)};
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+  function chip(st){var c=el('span','chip s'+st);c.appendChild(el('i'));c.appendChild(document.createTextNode(STAGE[st]));return c}
+
+  // 역 고르기 목록
+  ST.forEach(function(s,i){var o=el('option',null,s.n+'역');o.value=i;$('stSel').appendChild(o)});
+
+  // ── 막대 차트 ─────────────────────────────────────────
+  var NS='http://www.w3.org/2000/svg';
+  function sv(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e}
+  function topRound(x,y,w,h,r){r=Math.min(r,w/2,h);return 'M'+x+','+(y+h)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+(y+h)+'Z'}
+  var lastW=0;
+  // PC에서는 옆 카드(칸별 혼잡도)와 높이를 맞춘다
+  function fitH(svg){
+    var cc=$('forecast'), cars=$('cars');
+    if(window.innerWidth<=1100) return 260;
+    var cur=+svg.getAttribute('height')||260;
+    cc.style.alignSelf='start'; var nat=cc.offsetHeight; cc.style.alignSelf='';
+    return Math.max(260,Math.min(480,cur+(cars.offsetHeight-nat)));
+  }
+  function drawChart(){
+    var box=$('chart'), svg=$('chartSvg'), W0=box.clientWidth; if(!W0) return; lastW=W0;
+    var mob=W0<520, H=mob?220:fitH(svg), padL=32, padR=mob?4:56, padT=12, axH=24;
+    var plotW=W0-padL-padR, plotH=H-padT-axH, ymax=210;
+    svg.setAttribute('viewBox','0 0 '+W0+' '+H); svg.setAttribute('height',H);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var y=function(v){return padT+plotH-(Math.min(v,ymax)/ymax)*plotH};
+    // 격자 (실선 가는 선)
+    [0,50,100].forEach(function(t){
+      svg.appendChild(sv('line',{x1:padL,x2:padL+plotW,y1:y(t),y2:y(t),'class':t===0?'base-l':'grid-l'}));
+      var tx=sv('text',{x:padL-8,y:y(t)+4,'text-anchor':'end','class':'ax'});tx.textContent=t;svg.appendChild(tx);
+    });
+    // 기준선 (점선 = 기준값)
+    [[150,'주의','var(--warn-dot)','var(--warn)'],[170,'혼잡','var(--bad-dot)','var(--bad)'],[190,'심각','var(--sev-dot)','var(--sev-dot)']].forEach(function(t){
+      svg.appendChild(sv('line',{x1:padL,x2:padL+plotW,y1:y(t[0]),y2:y(t[0]),'class':'th',stroke:t[2]}));
+      var lab=mob?sv('text',{x:padL+plotW,y:y(t[0])-4,'text-anchor':'end','class':'thl',fill:t[3]})
+                 :sv('text',{x:padL+plotW+8,y:y(t[0])+4,'class':'thl',fill:t[3]});
+      lab.textContent=t[1]+' '+t[0];
+      svg.appendChild(lab);
+    });
+    var tx150=sv('text',{x:padL-8,y:y(150)+4,'text-anchor':'end','class':'ax'});tx150.textContent='150';svg.appendChild(tx150);
+    // 막대
+    var step=plotW/NSLOT, gap=Math.max(2,Math.min(4,step*0.3)), bw=step-gap;
+    for(var i=0;i<NSLOT;i++){
+      var v=val(S.st,S.day,S.dir,i), x=padL+i*step+gap/2;
+      var hit=sv('rect',{x:padL+i*step,y:padT,width:step,height:plotH,'class':'hit','data-i':i});
+      var bar=sv('path',{d:topRound(x,y(v),bw,padT+plotH-y(v),Math.min(4,bw/2)),'class':'bar'+(i===S.slot?' sel':''),'data-i':i});
+      svg.appendChild(hit); svg.appendChild(bar);
+    }
+    // 가로축 시간
+    [1,7,13,19,25,31,37].forEach(function(i){
+      var t=sv('text',{x:padL+i*step+step/2,y:H-6,'text-anchor':'middle','class':'ax'});t.textContent=slotStart(i).replace(':00','시').replace(/^0/,'');svg.appendChild(t);
+    });
+  }
+  function showTip(i,evt){
+    var box=$('chart'), tip=$('tip'), v=val(S.st,S.day,S.dir,i), st=stage(v);
+    var svg=$('chartSvg'), W0=box.clientWidth, mob=W0<520, padL=32, padR=mob?4:56, step=(W0-padL-padR)/NSLOT;
+    var H=+svg.getAttribute('height'), plotH=H-12-24, yv=12+plotH-(Math.min(v,210)/210)*plotH;
+    tip.textContent='';
+    tip.appendChild(el('b',null,v+'% · '+STAGE[st]));
+    tip.appendChild(document.createTextNode(slotLab(i)));
+    var x=padL+i*step+step/2; x=Math.max(64,Math.min(W0-64,x));
+    tip.style.left=x+'px'; tip.style.top=(yv-8)+'px'; tip.classList.add('on');
+    [].forEach.call(svg.querySelectorAll('.bar'),function(b){b.classList.toggle('hov',+b.getAttribute('data-i')===i)});
+  }
+  function hideTip(){$('tip').classList.remove('on');[].forEach.call($('chartSvg').querySelectorAll('.bar.hov'),function(b){b.classList.remove('hov')})}
+  $('chartSvg').addEventListener('pointermove',function(e){var t=e.target.closest('[data-i]');if(t)showTip(+t.getAttribute('data-i'),e)});
+  $('chartSvg').addEventListener('pointerleave',hideTip);
+  $('chartSvg').addEventListener('click',function(e){var t=e.target.closest('[data-i]');if(t){S.slot=+t.getAttribute('data-i');render();showTip(S.slot)}});
+  $('chartSvg').addEventListener('keydown',function(e){
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();S.slot=Math.max(0,Math.min(NSLOT-1,S.slot+(e.key==='ArrowRight'?1:-1)));render();showTip(S.slot)}
+  });
+  $('chartSvg').addEventListener('blur',hideTip);
+  document.querySelector('details.tbl').addEventListener('toggle',drawChart);
+
+  // ── 화면 그리기 ───────────────────────────────────────
+  function render(){
+    var s=ST[S.st], vals=[], i;
+    for(i=0;i<NSLOT;i++) vals.push(val(S.st,S.day,S.dir,i));
+    var v=vals[S.slot], st=stage(v), when=slotStart(S.slot);
+    $('stName').textContent=s.n+'역';
+    $('stSel').value=S.st;
+    $('stSub').textContent=DAY[S.day].n+' · '+DIR[S.dir]+' · 2026년 6월 데이터 구조 기준';
+    // KPI 1
+    $('k1lab').textContent=slotLab(S.slot)+' 예상 혼잡도';
+    $('k1num').textContent=v; $('k1num').appendChild(el('small',null,'%'));
+    var f1=$('k1foot'); f1.textContent=''; f1.appendChild(chip(st));
+    f1.appendChild(document.createTextNode(v>34?'좌석이 다 찬 34%의 '+(v/34).toFixed(1)+'배예요':'앉아서 갈 수 있는 정도예요'));
+    // KPI 2
+    var hot=[]; vals.forEach(function(x,k){if(x>150)hot.push(k)});
+    $('k2num').textContent=hot.length; $('k2num').appendChild(el('small',null,'개 구간'));
+    $('k2foot').textContent=hot.length?(hot.length===1?slotLab(hot[0]):slotStart(hot[0])+' 시작 · '+slotLab(hot[hot.length-1]).split('~')[1]+' 끝'):'하루 내내 보통 단계예요';
+    // 칸별
+    var cv=cars(S.st,S.day,S.dir,S.slot), mi=0, ma=0;
+    cv.forEach(function(x,k){if(x<cv[mi])mi=k;if(x>cv[ma])ma=k});
+    $('k3num').textContent=mi+1; $('k3num').appendChild(el('small',null,'호차'));
+    $('k3foot').textContent=cv[mi]+'% · 가장 붐비는 '+(ma+1)+'호차보다 '+(cv[ma]-cv[mi])+'%p 낮아요';
+    $('k4num').textContent=s.aed[0]; $('k4num').appendChild(el('small',null,'대'));
+    $('k4foot').textContent=s.aed[1];
+    $('carWhen').textContent=when; $('rankWhen').textContent=when;
+    var tr=$('train'); tr.textContent='';
+    var cmax=Math.max(210,cv[ma]);
+    cv.forEach(function(x,k){
+      var row=el('div','car'+(k===mi?' rec':''));
+      row.setAttribute('aria-label',(k+1)+'호차 '+x+'% '+STAGE[stage(x)]+(k===mi?', 가장 여유로운 칸':''));
+      row.appendChild(el('span','cn',(k+1)+'호차'));
+      var cb=el('span','cb'), bi=el('i'); bi.style.width=(x/cmax*100).toFixed(1)+'%'; cb.appendChild(bi); row.appendChild(cb);
+      row.appendChild(el('span','cv',x+'%'));
+      var d=el('span','cd'); d.style.background=DOT[stage(x)]; d.title=STAGE[stage(x)]; row.appendChild(d);
+      tr.appendChild(row);
+    });
+    var rn=$('recNote'); rn.textContent='';
+    rn.appendChild(el('b',null,(mi+1)+'호차'));
+    rn.appendChild(document.createTextNode(' 쪽 문으로 타면 덜 붐벼요. 점 색은 혼잡도 단계예요.'));
+    var dl=$('doors'); dl.textContent='';
+    if(!s.doors.length){dl.appendChild(el('span','door none','이 역은 직선 승강장이에요'))}
+    s.doors.forEach(function(d){var c=el('span','door');c.innerHTML='<svg width="16" height="16" aria-hidden="true"><use href="#i-gap"/></svg>';c.appendChild(document.createTextNode(d+' 문'));dl.appendChild(c)});
+    // 붐비는 역
+    $('rankSub').textContent='4호선 · '+DAY[S.day].n+' · '+DIR[S.dir];
+    var all=ST.map(function(_,k){return {k:k,v:val(k,S.day,S.dir,S.slot)}}).sort(function(a,b){return b.v-a.v}).slice(0,5);
+    var rk=$('rank'); rk.textContent='';
+    all.forEach(function(r,idx){
+      var b=el('button'); b.type='button'; b.setAttribute('data-k',r.k);
+      if(r.k===S.st) b.setAttribute('aria-current','true');
+      b.setAttribute('aria-label',(idx+1)+'위 '+ST[r.k].n+'역 '+r.v+'% '+STAGE[stage(r.v)]+', 이 역 보기');
+      b.appendChild(el('span','ri',String(idx+1)));
+      b.appendChild(el('span','rn',ST[r.k].n));
+      var rb=el('span','rb'),ri=el('i');ri.style.width=(r.v/210*100).toFixed(1)+'%';rb.appendChild(ri);b.appendChild(rb);
+      b.appendChild(el('span','rv',r.v+'%'));
+      b.appendChild(chip(stage(r.v)));
+      rk.appendChild(b);
+    });
+    // 안전설비
+    var fx=$('facs'); fx.textContent='';
+    [['i-aed','자동심장충격기',s.aed[1],s.aed[0],'대'],
+     ['i-elv','엘리베이터',s.elv[1],s.elv[0],'대'],
+     ['i-ext','소화기','승강장·대합실 곳곳',s.ext,'개'],
+     ['i-psd','승강장안전문','상선·하선 승강장',s.psd,''],
+     ['i-gap','틈이 넓은 문',s.doors.length?s.doors.join(', ')+' 문':'없음',s.doors.length,'곳']].forEach(function(f){
+      var r=el('div','fac'), ic=el('span','ic');
+      ic.innerHTML='<svg width="22" height="22" aria-hidden="true"><use href="#'+f[0]+'"/></svg>';
+      var t=el('div'); t.appendChild(el('div','ft',f[1])); t.appendChild(el('div','fd',f[2]));
+      var fv=el('div','fv',String(f[3])); if(f[4]) fv.appendChild(el('small',null,f[4]));
+      r.appendChild(ic); r.appendChild(t); r.appendChild(fv); fx.appendChild(r);
+    });
+    // 표 보기
+    var tb=$('tbody'); tb.textContent='';
+    vals.forEach(function(x,k){
+      var r=el('tr',k===S.slot?'sel':null);
+      r.appendChild(el('td',null,slotLab(k))); r.appendChild(el('td','r',x+'%'));
+      var td=el('td'); td.appendChild(chip(stage(x))); r.appendChild(td); tb.appendChild(r);
+    });
+    drawChart();
+  }
+
+  // ── 조작 ─────────────────────────────────────────────
+  $('stSel').addEventListener('change',function(){S.st=+this.value;render()});
+  function seg(id,key){
+    $(id).addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      S[key]=+b.getAttribute('data-v');
+      [].forEach.call(this.querySelectorAll('button'),function(x){x.setAttribute('aria-pressed',String(x===b))});
+      render();
+    });
+  }
+  seg('segDay','day'); seg('segDir','dir');
+  $('rank').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;S.st=+b.getAttribute('data-k');render();window.scrollTo({top:0,behavior:'smooth'})});
+  [].forEach.call(document.querySelectorAll('.nav a'),function(a){
+    a.addEventListener('click',function(){[].forEach.call(document.querySelectorAll('.nav a'),function(x){x.setAttribute('aria-current',String(x===a))})});
+  });
+  var rt; window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if($('chart').clientWidth!==lastW)drawChart()},80)});
+  render();
+  window.__demo={S:S,render:render,val:val,cars:cars};
+})();
+</script>
+</body>
+</html>
